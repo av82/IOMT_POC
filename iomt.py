@@ -34,7 +34,7 @@ class IOMT:
         self.create_AddLeaf_to_IOMT(20,leaf_value)
         self.create_AddLeaf_to_IOMT(30,leaf_value)
         self.create_AddLeaf_to_IOMT(40,leaf_value)
-        #self.create_AddLeaf_to_IOMT(50,leaf_value)
+        self.create_AddLeaf_to_IOMT(50,leaf_value)
         self.buildIOMT()
     '''
      inputs: Index, data
@@ -85,11 +85,12 @@ class IOMT:
     def nextPowerOf2(n): 
         if IOMT.isPowerOfTwo(n):
             return n
-        p=0
+        p=1
         while (p < n) : 
             p <<= 1
         print('next power of 2:',p)
         return p 
+        
     
     def buildIOMT(self):
         leaf_count=len(self.iomt_leaves)
@@ -138,7 +139,7 @@ class IOMT:
 
     @staticmethod
     def compute_leaf_hash(leaf):
-        if leaf.index is None and leaf.next is None and leaf.data is None:   #return 0 for empty leaf
+        if leaf.index is None and leaf.next is None and leaf.value is None:   #return 0 for empty leaf
             return Node(0)
         else:
             return Node(((sha256(str(leaf.index).encode('utf-8')+str(leaf.value).encode('utf-8')+str(leaf.next).encode('utf-8')).hexdigest())))
