@@ -18,32 +18,34 @@ class Node:
 class IOMT:
     def __init__(self):
         self.IOMT=[[]]
-        self.leaves=[]
+        self.iomt_leaves=[]
         self.levels=None
         self.root=None
         self.interval_tree= IntervalTree() # this can be maintained outside IOMT in a database. but for now leaving here
         # let's call i,None a special leaf for poc purposes, as interval_trees lib does not allow null intervals, but allows unbound interval
-        h_value="test"
+        leaf_value="test"
         #init interval tree
-        init_interval=Interval(0,10)
+        init_interval=Interval(-10,10,0) # special leaf - first leaf, index, next are actually supposed to be the same, interval tree does not support it yet
         self.interval_tree.add(init_interval)
+        new_leaf=Leaf(-10,10,leaf_value) # this is because interval tree does not support identity interval <i,i>
+        self.iomt_leaves.append(new_leaf)
         #print(self.interval_tree)
         #create first leaf -- in a database model we would not choose a None as next index of first leaf, it should be <index,index>
-        self.create_AddLeaf_to_IOMT(20,h_value)
-        self.create_AddLeaf_to_IOMT(30,h_value)
-        self.create_AddLeaf_to_IOMT(40,h_value)
-        self.create_AddLeaf_to_IOMT(50,h_value)
+        self.create_AddLeaf_to_IOMT(20,leaf_value)
+        self.create_AddLeaf_to_IOMT(30,leaf_value)
+        self.create_AddLeaf_to_IOMT(40,leaf_value)
+        #self.create_AddLeaf_to_IOMT(50,leaf_value)
         self.buildIOMT()
     '''
      inputs: Index, data
      output: new Leaf is created and added iomt - added to interval tree, appended to merkle leaves array 
     '''
     def create_AddLeaf_to_IOMT(self,index,data):
-        merkle_pos=len(self.leaves)+1 # the future position of the leaf in the IOMT
+        merkle_pos=len(self.iomt_leaves) # the future position of the leaf in the IOMT
         prep_leaf=self.prepareLeaf(index,merkle_pos)
-        print('prepleaf',prep_leaf)
+        #print('prepleaf',prep_leaf)
         new_leaf=Leaf(prep_leaf[0][0],prep_leaf[0][1],data) # this is because interval tree does not support identity interval <i,i>
-        self.leaves.append(new_leaf) # since there is no support for circular interval in interval_tree , we need to track it in merkle array
+        self.iomt_leaves.append(new_leaf) # since there is no support for circular interval in interval_tree , we need to track it in merkle array
       
     '''
     inputs: leaf, merkle_pos: count of this potential position of the leaf in merkle tree
@@ -71,7 +73,7 @@ class IOMT:
             self.interval_tree.addi(index,begin,merkle_pos)
             returnval=self.interval_tree.at(index)
         #print('int_tree',list((returnval)))
-        return list((returnval))
+        return list(returnval)
     
     @staticmethod        
     def isPowerOfTwo(n): 
@@ -90,7 +92,7 @@ class IOMT:
         return p 
     
     def buildIOMT(self):
-        leaf_count=len(self.leaves)
+        leaf_count=len(self.iomt_leaves)
         adjusted_leaf_count=IOMT.nextPowerOf2(leaf_count)
         height=math.ceil(math.log2(IOMT.nextPowerOf2(leaf_count)))
         print('height',height)
@@ -98,20 +100,17 @@ class IOMT:
         for i in range(1,height+1):
             self.IOMT.append(i)
             self.IOMT[i]=[]
-              
-      
-        
         #populate empty leaves to meet power of two
         #TODO: optimize storage by not storing the empty leaves by using position.
         if not IOMT.isPowerOfTwo(leaf_count):
-            for i in range(len(self.leaves),adjusted_leaf_count):
+            for i in range(len(self.iomt_leaves),adjusted_leaf_count):
                 new_leaf=Leaf(None,None,None)
-                self.leaves.append(new_leaf)
+                self.iomt_leaves.append(new_leaf)
 
         for i in range(0,height+1):
             if i==0:
-                for k in range(len(self.leaves)):
-                    node=IOMT.compute_leaf_hash(self.leaves[k])
+                for k in range(len(self.iomt_leaves)):
+                    node=IOMT.compute_leaf_hash(self.iomt_leaves[k])
                     self.IOMT[i].append(node)
             else:
                 level_node_count=math.ceil(adjusted_leaf_count/i)
@@ -123,7 +122,8 @@ class IOMT:
                     self.IOMT[i].append(node)
         for i in range(len(self.IOMT)):
             for j in range(len(self.IOMT[i])):
-                print(self.IOMT[i][j].hash)
+                print('level:',i,'node:',j,',',self.IOMT[i][j].hash)
+        print(self.interval_tree)
         self.root=self.IOMT[height][0]           
         return self.root
      
