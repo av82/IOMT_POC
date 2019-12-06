@@ -179,7 +179,7 @@ class IOMT_DB:
 
     def max_level(self,conn):
         cur = conn.cursor()
-        cur.execute("select max(level) from iomt where")
+        cur.execute("select max(level) from iomt")
         rows = cur.fetchall()
         return rows[0][0]
 
