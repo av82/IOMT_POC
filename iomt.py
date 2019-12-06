@@ -1,80 +1,95 @@
 from hashlib import sha256
+import dbiomt 
 from intervaltree import Interval, IntervalTree
 import math
 
 class Leaf:
-    def __init__(self,index,next,value):
+    def __init__(self,index,next,value,level,position):
         self.index  =   index
         self.next   =   next
         self.value  =   value
+        self.level  =   level # -1
+        self.position =  position # incremental value
+        
         
 class Node:
-    def __init__(self,hash):
-        self.hash = hash
+    def __init__(self,level,position,value):
+        self.hash = value
+        self.level=level
+        self.position=position
 
 '''
     Assumptions: index is unique identifier
 '''
 class IOMT:
-    def __init__(self):
+    def __init__(self,iomtdb):
         self.IOMT=[[]]
         self.iomt_leaves=[]
         self.levels=None
         self.root=None
-        self.interval_tree= IntervalTree() # this can be maintained outside IOMT in a database. but for now leaving here
-        # let's call i,None a special leaf for poc purposes, as interval_trees lib does not allow null intervals, but allows unbound interval
+        self.iomtdb=iomtdb
+        self.testwithNulls()
+        #self.buildIOMT()
+        
+        
+        #self.buildIOMT()
+    def testwithNulls(self):
         leaf_value="test"
-        #init interval tree
-        init_interval=Interval(-10,10,0) # special leaf - first leaf, index, next are actually supposed to be the same, interval tree does not support it yet
-        self.interval_tree.add(init_interval)
-        new_leaf=Leaf(-10,10,leaf_value) # this is because interval tree does not support identity interval <i,i>
-        self.iomt_leaves.append(new_leaf)
-        #print(self.interval_tree)
-        #create first leaf -- in a database model we would not choose a None as next index of first leaf, it should be <index,index>
-        self.create_AddLeaf_to_IOMT(20,leaf_value)
-        self.create_AddLeaf_to_IOMT(30,leaf_value)
-        self.create_AddLeaf_to_IOMT(40,leaf_value)
-        self.create_AddLeaf_to_IOMT(50,leaf_value)
+        self.create_Add_Leaf_to_IOMT(10,leaf_value)
+        self.create_Add_Leaf_to_IOMT(20,leaf_value)
+        self.create_Add_Leaf_to_IOMT(40,leaf_value)
+        self.create_Add_Leaf_to_IOMT(30,leaf_value)
         self.buildIOMT()
-    '''
-     inputs: Index, data
-     output: new Leaf is created and added iomt - added to interval tree, appended to merkle leaves array 
-    '''
-    def create_AddLeaf_to_IOMT(self,index,data):
-        merkle_pos=len(self.iomt_leaves) # the future position of the leaf in the IOMT
-        prep_leaf=self.prepareLeaf(index,merkle_pos)
-        #print('prepleaf',prep_leaf)
-        new_leaf=Leaf(prep_leaf[0][0],prep_leaf[0][1],data) # this is because interval tree does not support identity interval <i,i>
-        self.iomt_leaves.append(new_leaf) # since there is no support for circular interval in interval_tree , we need to track it in merkle array
-      
-    '''
-    inputs: leaf, merkle_pos: count of this potential position of the leaf in merkle tree
-    output: the leaf inserted into the interval_tree due to one of below:
-        1.  slice of an existing leaf(interval)
-        2.  prepend to begin of interval tree
-        3.  appending to end of interval tree
-        note: not handling coverage of equals, handling only greater or less than, as assumption is identifiers are unique
-            : if we want to support null intervals like (0,0) or (20,0), we need to overwrite this interval tree rules somewhere.
-    '''
-    def prepareLeaf(self,index,merkle_pos):
-        #check if there is an overlapping index, i.e: membership of some existing range, 
-        #else check if less than min, greater than max 
-        end=self.interval_tree.end()
-        begin=self.interval_tree.begin()
-        #print('begin,end',begin,end)
-        returnval=None
-        if self.interval_tree.overlaps(index):
-            self.interval_tree.slice(index)
-            returnval=self.interval_tree.at(index)
-        elif index>self.interval_tree.end():
-            self.interval_tree.addi(end,index,merkle_pos)
-            returnval=self.interval_tree.at(index-1)
-        elif index<self.interval_tree.begin():
-            self.interval_tree.addi(index,begin,merkle_pos)
-            returnval=self.interval_tree.at(index)
-        #print('int_tree',list((returnval)))
-        return list(returnval)
+        '''self.create_Add_Leaf_to_IOMT(5,leaf_value)
+        self.create_Add_Leaf_to_IOMT(None,leaf_value)
+        self.create_Add_Leaf_to_IOMT(25,leaf_value)
+        self.create_Add_Leaf_to_IOMT(2,leaf_value)
+        self.create_Add_Leaf_to_IOMT(None,leaf_value)
+        self.create_Add_Leaf_to_IOMT(45,leaf_value)
+        conn = self.iomtdb.create_connection()
+        self.iomtdb.print_iomt_leaves(conn)'''
     
+    '''
+        create new iomt leaf
+    '''
+    def create_Add_Leaf_to_IOMT(self,index,data):
+        conn = self.iomtdb.create_connection()
+        leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
+        if leaf_count==0:
+            iomt_leaf=(index,index,data,-1,0)
+            self.iomtdb.create_iomt_record(conn,iomt_leaf)
+            conn.commit()
+            return
+        if index is None:
+            iomt_leaf=(None,None,None,-1,leaf_count)
+            self.iomtdb.create_iomt_record(conn,iomt_leaf)
+            conn.commit()
+            return
+        min=self.iomtdb.get_min_iomt(conn)
+        max=self.iomtdb.get_max_iomt(conn)
+        conn = self.iomtdb.create_connection()
+        if index>max:
+            new_max=index
+            self.iomtdb.set_max_indx_iomt(conn,new_max,data)
+           
+        elif index<min:
+            new_min=index
+            self.iomtdb.set_min_indx_iomt(conn,new_min,data)
+            
+        else:
+             range=self.iomtdb.check_enclosure(conn,index) 
+             if range is not None:
+                 self.iomtdb.split_interval_iomt(conn,index,range[0],data)
+        conn.commit()
+        #self.iomtdb.get_iomt_leaf_with_index(conn,index)
+        return
+        
+    def create_Add_Node_to_IOMT(self,level,data,position):
+        conn = self.iomtdb.create_connection()
+        iomt_node=(None,None,data,level,position)
+        self.iomtdb.create_iomt_record(conn,iomt_node)
+        return
+
     @staticmethod        
     def isPowerOfTwo(n): 
         if n==1:
@@ -93,7 +108,8 @@ class IOMT:
         
     
     def buildIOMT(self):
-        leaf_count=len(self.iomt_leaves)
+        conn = self.iomtdb.create_connection()
+        leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
         adjusted_leaf_count=IOMT.nextPowerOf2(leaf_count)
         height=math.ceil(math.log2(IOMT.nextPowerOf2(leaf_count)))
         print('height',height)
@@ -105,48 +121,67 @@ class IOMT:
         #TODO: optimize storage by not storing the empty leaves by using position.
         if not IOMT.isPowerOfTwo(leaf_count):
             for i in range(len(self.iomt_leaves),adjusted_leaf_count):
-                new_leaf=Leaf(None,None,None)
-                self.iomt_leaves.append(new_leaf)
+               self.create_Add_Leaf_to_IOMT(None,"test")
 
-        for i in range(0,height+1):
-            if i==0:
-                for k in range(len(self.iomt_leaves)):
-                    node=IOMT.compute_leaf_hash(self.iomt_leaves[k])
-                    self.IOMT[i].append(node)
+        for i in range(-1,height+1):
+            if i==-1:
+                for k in range(leaf_count):
+                    iomt_record=self.iomtdb.get_min_place_holder_position(conn)
+                    new_iomt_record=self.compute_leaf_hash(iomt_record,0,k)
+                    self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
             else:
                 level_node_count=math.ceil(adjusted_leaf_count/i)
+                lower_level_node_count=self.iomtdb.get_iomt_node_count_at_level(i-1)
                 print('level node count',level_node_count)
-                print('len of j',len(self.IOMT[i-1]))
-                for j in range(0,len(self.IOMT[i-1]),2):
+                print('len of j',lower_level_node_count)
+                for j in range(0,lower_level_node_count,2):
                     print('i',i,'j',j)
-                    node=IOMT.compute_parent_hash(self.IOMT[i-1][j],self.IOMT[i-1][j+1])
-                    self.IOMT[i].append(node)
-        for i in range(len(self.IOMT)):
-            for j in range(len(self.IOMT[i])):
-                print('level:',i,'node:',j,',',self.IOMT[i][j].hash)
-        print(self.interval_tree)
+                    self.IOMT[i-1][j]
+                    self.IOMT[i-1][j+1]
+                    left=self.iomtdb.get_node_at(i-1,lower_level_node_count)
+                    right=self.iomtdb.get_node_at(i-1,lower_level_node_count+1)
+                    new_iomt_record=IOMT.compute_parent_hash(left,right,i,j)
+                    self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
+        self.iomtdb.print_iomt_leaves(conn)
         self.root=self.IOMT[height][0]           
         return self.root
      
     @staticmethod
-    def compute_parent_hash(left_node,right_node):
+    def compute_parent_hash(left_node,right_node,level,position):
         if left_node.hash is 0:
-            return right_node
+            return (level,right_node[2],position)
         elif right_node.hash is 0:
-            return left_node
+            return Node(level,left_node[2],position)
         else:
-             return Node((sha256(str(left_node.hash).encode('utf-8')+str(right_node.hash).encode('utf-8')).hexdigest()))
+             return Node(level,(sha256(str(left_node[2]).encode('utf-8')+str(right_node[2]).encode('utf-8')).hexdigest()),position)
 
     @staticmethod
-    def compute_leaf_hash(leaf):
-        if leaf.index is None and leaf.next is None and leaf.value is None:   #return 0 for empty leaf
-            return Node(0)
+    def compute_leaf_hash(leaf,position,level):
+        if leaf[0] is None and leaf[1] is None and leaf[2] is None:   #return 0 for empty leaf
+            return (0,level,position)
         else:
-            return Node(((sha256(str(leaf.index).encode('utf-8')+str(leaf.value).encode('utf-8')+str(leaf.next).encode('utf-8')).hexdigest())))
+            return (sha256(str(leaf[0]).encode('utf-8')+str(leaf[2]).encode('utf-8')+str(leaf[1]).encode('utf-8')).hexdigest(),level,position)
 
    
 def main():
-    IOMT()
+    iomtdb=dbiomt.IOMT_DB('iomt.db')
+    conn = iomtdb.create_connection()
+    # create tables
+    '''if conn is not None:
+        # create projects table
+        with conn:
+            iomt_record_1=(-10,10,'test',0,0)
+            iomt_record_2=(10,20,'test',0,1)
+            iomt_record_3=(20,30,'test',0,2)
+            iomt_record_4=(30,40,'test',0,3)
+            iomtdb.create_iomt_record(conn,iomt_record_1)
+            iomtdb.create_iomt_record(conn,iomt_record_2)
+            iomtdb.create_iomt_record(conn,iomt_record_3)
+            iomtdb.create_iomt_record(conn,iomt_record_4)
+            iomtdb.select_iomt_leaf(conn,10)
+    else:
+        print("Error! cannot create the database connection.")'''
+    IOMT(iomtdb)
   
 if __name__== "__main__":
   main() 
