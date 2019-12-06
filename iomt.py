@@ -39,7 +39,11 @@ class IOMT:
         self.create_Add_Leaf_to_IOMT(20,leaf_value)
         self.create_Add_Leaf_to_IOMT(40,leaf_value)
         self.create_Add_Leaf_to_IOMT(30,leaf_value)
+        self.create_Add_Leaf_to_IOMT(60,leaf_value)
+        #conn = self.iomtdb.create_connection()
+        #self.iomtdb.print_iomt_leaves(conn)
         self.buildIOMT()
+        #self.iomtdb.print_iomt_leaves(conn)
         '''self.create_Add_Leaf_to_IOMT(5,leaf_value)
         self.create_Add_Leaf_to_IOMT(None,leaf_value)
         self.create_Add_Leaf_to_IOMT(25,leaf_value)
@@ -56,12 +60,12 @@ class IOMT:
         conn = self.iomtdb.create_connection()
         leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
         if leaf_count==0:
-            iomt_leaf=(index,index,data,-1,0)
+            iomt_leaf=(index,index,data,0,0)
             self.iomtdb.create_iomt_record(conn,iomt_leaf)
             conn.commit()
             return
         if index is None:
-            iomt_leaf=(None,None,None,-1,leaf_count)
+            iomt_leaf=(None,None,None,0,leaf_count)
             self.iomtdb.create_iomt_record(conn,iomt_leaf)
             conn.commit()
             return
@@ -71,11 +75,9 @@ class IOMT:
         if index>max:
             new_max=index
             self.iomtdb.set_max_indx_iomt(conn,new_max,data)
-           
         elif index<min:
             new_min=index
             self.iomtdb.set_min_indx_iomt(conn,new_min,data)
-            
         else:
              range=self.iomtdb.check_enclosure(conn,index) 
              if range is not None:
@@ -84,10 +86,12 @@ class IOMT:
         #self.iomtdb.get_iomt_leaf_with_index(conn,index)
         return
         
-    def create_Add_Node_to_IOMT(self,level,data,position):
+    def create_Add_Node_to_IOMT(self,data,level,position):
         conn = self.iomtdb.create_connection()
         iomt_node=(None,None,data,level,position)
+        #print('create_node',iomt_node)
         self.iomtdb.create_iomt_record(conn,iomt_node)
+        conn.commit()
         return
 
     @staticmethod        
@@ -111,52 +115,59 @@ class IOMT:
         conn = self.iomtdb.create_connection()
         leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
         adjusted_leaf_count=IOMT.nextPowerOf2(leaf_count)
-        height=math.ceil(math.log2(IOMT.nextPowerOf2(leaf_count)))
-        print('height',height)
+        height=math.ceil(math.log2(IOMT.nextPowerOf2(leaf_count)))+1
         print('adjusted leaf count',adjusted_leaf_count)
-        for i in range(1,height+1):
-            self.IOMT.append(i)
-            self.IOMT[i]=[]
+        print('iomt height',height)
+       
         #populate empty leaves to meet power of two
         #TODO: optimize storage by not storing the empty leaves by using position.
         if not IOMT.isPowerOfTwo(leaf_count):
-            for i in range(len(self.iomt_leaves),adjusted_leaf_count):
+            for i in range(leaf_count,adjusted_leaf_count):
                self.create_Add_Leaf_to_IOMT(None,"test")
+               conn.commit()
+        #self.iomtdb.print_iomt_leaves(conn)
 
-        for i in range(-1,height+1):
-            if i==-1:
-                for k in range(leaf_count):
-                    iomt_record=self.iomtdb.get_min_place_holder_position(conn)
-                    new_iomt_record=self.compute_leaf_hash(iomt_record,0,k)
+        for i in range(1,height+1):
+            if i==1:
+                for k in range(adjusted_leaf_count):
+                    iomt_record=self.iomtdb.get_iomt_leaf_at_pos(conn,k)
+                    print(iomt_record)
+                    new_iomt_record=self.compute_leaf_hash(iomt_record,i,k)
+                    #print('new_iomt_record',new_iomt_record)
                     self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
+                #self.iomtdb.print_iomt_leaves(conn)
             else:
-                level_node_count=math.ceil(adjusted_leaf_count/i)
-                lower_level_node_count=self.iomtdb.get_iomt_node_count_at_level(i-1)
-                print('level node count',level_node_count)
-                print('len of j',lower_level_node_count)
-                for j in range(0,lower_level_node_count,2):
-                    print('i',i,'j',j)
-                    self.IOMT[i-1][j]
-                    self.IOMT[i-1][j+1]
-                    left=self.iomtdb.get_node_at(i-1,lower_level_node_count)
-                    right=self.iomtdb.get_node_at(i-1,lower_level_node_count+1)
-                    new_iomt_record=IOMT.compute_parent_hash(left,right,i,j)
+                level_node_count= math.ceil(adjusted_leaf_count/i) 
+                lower_level_node_count=self.iomtdb.get_iomt_node_count_at_level(conn,i-1)
+                #print('level node count',level_node_count)
+                #print('len of j',lower_level_node_count)
+                for j,l in zip(range(0,lower_level_node_count,2),range(0,level_node_count)):
+                    #print('i',i,'j',j)
+                    left=self.iomtdb.get_node_at(conn,i-1,j)
+                    right=self.iomtdb.get_node_at(conn,i-1,j+1)
+                    new_iomt_record=IOMT.compute_parent_hash(left,right,i,l)
+                    #print('new_iomt_record',new_iomt_record)
                     self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
+        print('PRINTING IOMT LEAVES')
         self.iomtdb.print_iomt_leaves(conn)
-        self.root=self.IOMT[height][0]           
+        print('PRINTING IOMT NODES')
+        self.iomtdb.print_iomt_nodes(conn)
+        root=self.iomtdb.get_root(conn)
+        self.root=root
         return self.root
      
     @staticmethod
     def compute_parent_hash(left_node,right_node,level,position):
-        if left_node.hash is 0:
-            return (level,right_node[2],position)
-        elif right_node.hash is 0:
-            return Node(level,left_node[2],position)
+        #print('left',left_node[2],left_node[2]=='0','right',right_node[2],right_node[2]=='0')
+        if left_node[2]=='0':
+            return (right_node[2],level,position)
+        elif right_node[2]=='0':
+            return (left_node[2],level,position)
         else:
-             return Node(level,(sha256(str(left_node[2]).encode('utf-8')+str(right_node[2]).encode('utf-8')).hexdigest()),position)
+             return (sha256(str(left_node[2]).encode('utf-8')+str(right_node[2]).encode('utf-8')).hexdigest(),level,position)
 
     @staticmethod
-    def compute_leaf_hash(leaf,position,level):
+    def compute_leaf_hash(leaf,level,position):
         if leaf[0] is None and leaf[1] is None and leaf[2] is None:   #return 0 for empty leaf
             return (0,level,position)
         else:
