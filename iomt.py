@@ -3,20 +3,6 @@ import dbiomt
 from intervaltree import Interval, IntervalTree
 import math
 
-class Leaf:
-    def __init__(self,index,next,value,level,position):
-        self.index  =   index
-        self.next   =   next
-        self.value  =   value
-        self.level  =   level # -1
-        self.position =  position # incremental value
-        
-        
-class Node:
-    def __init__(self,level,position,value):
-        self.hash = value
-        self.level=level
-        self.position=position
 
 '''
     Assumptions: index is unique identifier
