@@ -35,18 +35,30 @@ class IOMT_DB:
         except Error as e:
             print(e)
    
-    def create_iomt_record(self,conn, iomt_record):
+    def create_or_update_iomt_record(self,conn, iomt_record):
         place_holder=self.get_min_place_holder_position(conn,iomt_record[3])
         #print('place_holder',place_holder)
-        if place_holder is None or iomt_record[0] is None or iomt_record[3]>0:
-            sql = ''' insert into iomt(indx,next,value,level,position)
-                    values(?,?,?,?,?) '''
-            cur = conn.cursor()
-            cur.execute(sql, iomt_record)
-            return cur.lastrowid
+        if place_holder is None or iomt_record[0] is None:
+            if iomt_record[3]>0:
+                if self.get_node_at(conn,iomt_record[3],iomt_record[4]) is None:
+                    sql = ''' insert into iomt(indx,next,value,level,position)
+                            values(?,?,?,?,?) '''
+                    cur = conn.cursor()
+                    cur.execute(sql, iomt_record)
+                    return cur.lastrowid
+                else:
+                    cur=conn.cursor()
+                    #print(iomt_record[0],iomt_record[1],iomt_record[2],place_holder)
+                    cur.execute("Update iomt set indx=?,next=?,value=? where level=? and position=?",[iomt_record[0],iomt_record[1],iomt_record[2],iomt_record[3],iomt_record[4]])
+                    return cur.lastrowid
+            else:
+                sql = ''' insert into iomt(indx,next,value,level,position)
+                            values(?,?,?,?,?) '''
+                cur = conn.cursor()
+                cur.execute(sql, iomt_record)
         else:
             cur=conn.cursor()
-            print(iomt_record[0],iomt_record[1],iomt_record[2],place_holder)
+            #print(iomt_record[0],iomt_record[1],iomt_record[2],place_holder)
             cur.execute("Update iomt set indx=?,next=?,value=? where level=0 and position=?",[iomt_record[0],iomt_record[1],iomt_record[2],place_holder])
             return cur.lastrowid
 
@@ -81,7 +93,7 @@ class IOMT_DB:
         leaf_count=self.get_iomt_leaf_count(conn)
         if leaf is not None:
             iomt_record=(new_index,leaf[1],value,0,leaf_count)
-            self.create_iomt_record(conn,iomt_record)
+            self.create_or_update_iomt_record(conn,iomt_record)
             cur=conn.cursor()
             cur.execute("Update iomt set next=? where level=0 and indx=?",[new_index,old_index])
             return cur.lastrowid
@@ -90,7 +102,7 @@ class IOMT_DB:
         cur_min=self.get_min_iomt(conn)
         leaf_count=self.get_iomt_leaf_count(conn)
         iomt_record=(new_min_index,cur_min,value,0,leaf_count)
-        self.create_iomt_record(conn,iomt_record)
+        self.create_or_update_iomt_record(conn,iomt_record)
         self.set_next_of_cur_max_iomt(conn,new_min_index)
 
     '''
@@ -101,7 +113,7 @@ class IOMT_DB:
         leaf_count=self.get_iomt_leaf_count(conn)
         iomt_record=(new_max_index,cur_min,value,0,leaf_count)
         self.set_next_of_cur_max_iomt(conn,new_max_index)
-        self.create_iomt_record(conn,iomt_record)
+        self.create_or_update_iomt_record(conn,iomt_record)
         
 
     def get_max_iomt(self,conn):
@@ -152,10 +164,15 @@ class IOMT_DB:
         #print('getnode_at',level,position)
         cur.execute("select * from iomt where level=? and position=?", [level,position])
         rows = cur.fetchall()
-        return rows[0]
+        if len(rows)>0:
+            return rows[0]
+        else:
+            return  None
 
     def get_iomt_node_count_at_level(self,conn,level):
         cur = conn.cursor()
+        #print('in get_iomt_node_count_at_level',level)
+        #self.get_iomt_nodes_at_level(conn,level)
         cur.execute("select count(*) from iomt where level=?",[level])
         rows = cur.fetchall()
         if len(rows)>0:
@@ -163,6 +180,17 @@ class IOMT_DB:
         else:
             return None
     
+    def get_iomt_nodes_at_level(self,conn,level):
+        cur = conn.cursor()
+        #print('in get_iomt_nodes_at_level',level)
+        cur.execute("select * from iomt where level=?",[level])
+        rows = cur.fetchall()
+        if len(rows)>0:
+            for row in rows:
+                print(row)
+        else:
+            return None
+
     def print_iomt_leaves(self,conn):
         cur = conn.cursor()
         cur.execute("select * from iomt where level=0")
