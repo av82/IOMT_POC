@@ -40,6 +40,12 @@ class IOMT:
         self.buildIOMT()
         self.create_Add_Leaf_to_IOMT(30,leaf_value)
         self.buildIOMT()
+        #new min case
+        self.create_Add_Leaf_to_IOMT(5,leaf_value)
+        self.buildIOMT()
+        #new enclosure case
+        self.create_Add_Leaf_to_IOMT(25,leaf_value)
+        self.buildIOMT()
        
         #conn = self.iomtdb.create_connection()
         #self.iomtdb.print_iomt_leaves(conn)
@@ -113,7 +119,9 @@ class IOMT:
         print('next power of 2:',p)
         return p 
         
-    
+    '''
+      TODO: // optimize by providing proof vectors for updates etc.
+    '''
     def buildIOMT(self):
         conn = self.iomtdb.create_connection()
         leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
@@ -133,7 +141,7 @@ class IOMT:
 
         for i in range(1,height):
             if i==1:
-                for k in range(first_level_node_count,adjusted_leaf_count):
+                for k in range(0,adjusted_leaf_count):
                     iomt_record=self.iomtdb.get_iomt_leaf_at_pos(conn,k)
                     print(iomt_record)
                     new_iomt_record=self.compute_leaf_hash(iomt_record,i,k)
