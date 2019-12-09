@@ -3,11 +3,6 @@ import dbiomt
 from intervaltree import Interval, IntervalTree
 import math
 
-class Leaf_ProofVector:
-    def __init__(self,level,index):
-        self.level=level
-        self.index=index
-
 '''
     Assumptions: index is unique identifier
 '''
@@ -20,17 +15,46 @@ class IOMT:
         self.iomtdb=iomtdb
         self.testwithNulls()
         self.printIOMT()
-        self.printProofVector(1)
-        self.printProofVector(7)
-        self.printProofVector(4)
-
-        
+        self.printProofVector(1,1)
+        self.printProofVector(7,1)
+        self.printProofVector(4,1)
+        p_vector=self.getProofVector_for_Node(1,1)
+        print(self.VerifyProofVector(p_vector))
+        p_vector=self.getProofVector_for_Node(7,1)
+        print(self.VerifyProofVector(p_vector))
+        p_vector=self.getProofVector_for_Node(4,1)
+        print(self.VerifyProofVector(p_vector))
+      
     
-    def printProofVector(self,index):
-        proof_leaf_test=self.getProofVector_for_Leaf(index)
+    def VerifyProofVector(self,proofvector):
+        conn = self.iomtdb.create_connection()
+        proof_length=len(proofvector)
+        print('\nproof vector verification: ')
+        for proof_elem in proofvector:
+            print('height:',proof_elem[3],'index:',proof_elem[4],'hash:',proof_elem[2])
+        hash_val=None
+        if proof_length<1:
+            return hash_val
+        else:
+            hash_val=proofvector[0][2]
+            for i  in range(1,proof_length):
+                temp_level=proofvector[i][3]+1
+                temp_index=int(proofvector[i][4]/2)
+                if proofvector[i][4]&1 == 1:
+                    iomt_record=self.compute_parent_hash(hash_val,proofvector[i][2],temp_level,temp_index)
+                    hash_val=iomt_record[0]
+                else:
+                    iomt_record=self.compute_parent_hash(proofvector[i][2],hash_val,temp_level,temp_index)
+                    hash_val=iomt_record[0]
+        original_root=self.iomtdb.get_root(conn)
+        #print('proof root: ',hash_val,'original root',original_root)
+        return hash_val==original_root
+
+    def printProofVector(self,index,height):
+        proof_leaf_test=self.getProofVector_for_Node(index,height)
         print('\nproof vector for leaf: ',index)
         for proof_elem in proof_leaf_test:
-            print('height:',proof_elem.level,'index:',proof_elem.index)
+            print('height:',proof_elem[3],'index:',proof_elem[4],'hash:',proof_elem[2])
 
     def printIOMT(self):
         conn = self.iomtdb.create_connection()
@@ -118,24 +142,23 @@ class IOMT:
         conn.commit()
         return
 
-    def getProofVector_for_Node(self,level,index):
-        return
-   
-    def getProofVector_for_Leaf(self,index):
+    def getProofVector_for_Node(self,position,height):
         conn = self.iomtdb.create_connection()
         max_height = self.iomtdb.get_max_level(conn)
-        current_height=0
-        current_index=index
+        current_height=height
+        current_position=position
         leaf_proof_vector=[]
+        iomt_node=self.iomtdb.get_node_at(conn,current_height,current_position)
+        leaf_proof_vector.append(iomt_node)
         while(current_height<max_height):
-            if current_index&1:
-                current_index=current_index-1
+            if current_position&1:
+                current_position=current_position-1
             else:
-                current_index=current_index+1
-            vector_element=Leaf_ProofVector(current_height,current_index)
-            leaf_proof_vector.append(vector_element)
+                current_position=current_position+1
+            iomt_node=self.iomtdb.get_node_at(conn,current_height,current_position)
+            leaf_proof_vector.append(iomt_node)
             current_height+=1
-            current_index=int(current_index/2)
+            current_position=int(current_position/2)
         return leaf_proof_vector
 
         
@@ -165,9 +188,9 @@ class IOMT:
     def buildIOMT(self):
         conn = self.iomtdb.create_connection()
         leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
-        first_level_node_count=self.iomtdb.get_iomt_node_count_at_level(conn,1)
         adjusted_leaf_count=IOMT.nextPowerOf2(leaf_count)
-        height=math.ceil(math.log2(IOMT.nextPowerOf2(leaf_count)))+1
+        height=math.ceil(math.log2(adjusted_leaf_count))+1
+        print('height of the tree:',height)
         #print('adjusted leaf count',adjusted_leaf_count)
         #print('iomt height',height)
        
@@ -179,7 +202,7 @@ class IOMT:
                conn.commit()
         #self.iomtdb.print_iomt_leaves(conn)
 
-        for i in range(1,height):
+        for i in range(1,height+1):
             if i==1:
                 for k in range(0,adjusted_leaf_count):
                     iomt_record=self.iomtdb.get_iomt_leaf_at_pos(conn,k)
@@ -200,7 +223,7 @@ class IOMT:
                     #self.iomtdb.print_iomt_nodes(conn)
                     left=self.iomtdb.get_node_at(conn,i-1,j)
                     right=self.iomtdb.get_node_at(conn,i-1,j+1)
-                    new_iomt_record=IOMT.compute_parent_hash(left,right,i,l)
+                    new_iomt_record=IOMT.compute_parent_hash(left[2],right[2],i,l)
                     #print('new_iomt_record',new_iomt_record)
                     self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
         root=self.iomtdb.get_root(conn)
@@ -208,14 +231,14 @@ class IOMT:
         return self.root
      
     @staticmethod
-    def compute_parent_hash(left_node,right_node,level,position):
-        #print('left',left_node[2],left_node[2]=='0','right',right_node[2],right_node[2]=='0')
-        if left_node[2]=='0':
-            return (right_node[2],level,position)
-        elif right_node[2]=='0':
-            return (left_node[2],level,position)
+    def compute_parent_hash(left_hash,right_hash,level,position):
+        #print('l:',left_hash,'r:',right_hash,'h:',level,'p:',position)
+        if left_hash=='0':
+            return (right_hash,level,position)
+        elif right_hash=='0':
+            return (left_hash,level,position)
         else:
-             return (sha256(str(left_node[2]).encode('utf-8')+str(right_node[2]).encode('utf-8')).hexdigest(),level,position)
+             return (str(sha256(str(left_hash).encode('utf-8')+str(right_hash).encode('utf-8')).hexdigest()),level,position)
 
     @staticmethod
     def compute_leaf_hash(leaf,level,position):
@@ -228,22 +251,6 @@ class IOMT:
    
 def main():
     iomtdb=dbiomt.IOMT_DB('iomt.db')
-    conn = iomtdb.create_connection()
-    # create tables
-    '''if conn is not None:
-        # create projects table
-        with conn:
-            iomt_record_1=(-10,10,'test',0,0)
-            iomt_record_2=(10,20,'test',0,1)
-            iomt_record_3=(20,30,'test',0,2)
-            iomt_record_4=(30,40,'test',0,3)
-            iomtdb.create_or_update_iomt_record(conn,iomt_record_1)
-            iomtdb.create_or_update_iomt_record(conn,iomt_record_2)
-            iomtdb.create_or_update_iomt_record(conn,iomt_record_3)
-            iomtdb.create_or_update_iomt_record(conn,iomt_record_4)
-            iomtdb.select_iomt_leaf(conn,10)
-    else:
-        print("Error! cannot create the database connection.")'''
     IOMT(iomtdb)
   
 if __name__== "__main__":
