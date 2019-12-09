@@ -11,16 +11,15 @@ python sqlite
 The implementation is broken to persistence layer and interface layer. The persistence layer is performed by ```dbiomt.py```. 
 
 **dbiomt.py:** provides persistence functions to store the iomt nodes/leaves in a database table as below with other helper functions
-|iomt
---- |
-| indx  | next | value | level | position
+
+IOMT Table:
+| indx  | next | value | level | position|
 --- | --- | ---| --- | ---
 
 Example Tabe:
 
-|iomt
---- |
 | indx  | next | value | level | position
+--- | --- | ---| --- | ---
 10 | 20 | 'test'| 0 | 0
 20 | 25 | 'test'| 0 | 1
 40 | 5 | 'test'| 0 | 2
