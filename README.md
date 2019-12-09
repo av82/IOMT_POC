@@ -13,8 +13,8 @@ The implementation is broken to persistence layer and interface layer. The persi
 **dbiomt.py:** provides persistence functions to store the iomt nodes/leaves in a database table as below with other helper functions
 
 IOMT Table:
-| indx  | next | value | level | position|
---- | --- | ---| --- | ---|
+| indx  | next | value | level | position
+--- | --- | ---| --- | ---
 
 Example Tabe:
 
