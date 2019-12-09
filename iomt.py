@@ -3,6 +3,10 @@ import dbiomt
 from intervaltree import Interval, IntervalTree
 import math
 
+class Leaf_ProofVector:
+    def __init__(self,level,index):
+        self.level=level
+        self.index=index
 
 '''
     Assumptions: index is unique identifier
@@ -16,6 +20,17 @@ class IOMT:
         self.iomtdb=iomtdb
         self.testwithNulls()
         self.printIOMT()
+        self.printProofVector(1)
+        self.printProofVector(7)
+        self.printProofVector(4)
+
+        
+    
+    def printProofVector(self,index):
+        proof_leaf_test=self.getProofVector_for_Leaf(index)
+        print('\nproof vector for leaf: ',index)
+        for proof_elem in proof_leaf_test:
+            print('height:',proof_elem.level,'index:',proof_elem.index)
 
     def printIOMT(self):
         conn = self.iomtdb.create_connection()
@@ -46,7 +61,7 @@ class IOMT:
         #new enclosure case
         self.create_Add_Leaf_to_IOMT(25,leaf_value)
         self.buildIOMT()
-       
+
         #conn = self.iomtdb.create_connection()
         #self.iomtdb.print_iomt_leaves(conn)
         
@@ -102,6 +117,31 @@ class IOMT:
         self.iomtdb.create_or_update_iomt_record(conn,iomt_node)
         conn.commit()
         return
+
+    def getProofVector_for_Node(self,level,index):
+        return
+   
+    def getProofVector_for_Leaf(self,index):
+        conn = self.iomtdb.create_connection()
+        max_height = self.iomtdb.get_max_level(conn)
+        current_height=0
+        current_index=index
+        leaf_proof_vector=[]
+        while(current_height<max_height):
+            if current_index&1:
+                current_index=current_index-1
+            else:
+                current_index=current_index+1
+            vector_element=Leaf_ProofVector(current_height,current_index)
+            leaf_proof_vector.append(vector_element)
+            current_height+=1
+            current_index=int(current_index/2)
+        return leaf_proof_vector
+
+        
+    @staticmethod
+    def msb(n):
+        return int(math.log(n,2))
 
     @staticmethod        
     def isPowerOfTwo(n): 

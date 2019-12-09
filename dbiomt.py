@@ -205,7 +205,7 @@ class IOMT_DB:
         for row in rows:
             print(row)
 
-    def max_level(self,conn):
+    def get_max_level(self,conn):
         cur = conn.cursor()
         cur.execute("select max(level) from iomt")
         rows = cur.fetchall()
