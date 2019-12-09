@@ -14,7 +14,7 @@ The implementation is broken to persistence layer and interface layer. The persi
 
 IOMT Table:
 | indx  | next | value | level | position|
---- | --- | ---| --- | ---
+--- | --- | ---| --- | ---|
 
 Example Tabe:
 
