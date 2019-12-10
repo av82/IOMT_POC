@@ -179,7 +179,7 @@ class IOMT:
         p=1
         while (p < n) : 
             p <<= 1
-        print('next power of 2:',p)
+        #print('next power of 2:',p)
         return p 
         
     '''
@@ -190,7 +190,7 @@ class IOMT:
         leaf_count=self.iomtdb.get_iomt_leaf_count(conn)
         adjusted_leaf_count=IOMT.nextPowerOf2(leaf_count)
         height=math.ceil(math.log2(adjusted_leaf_count))+1
-        print('height of the tree:',height)
+        #print('height of the tree:',height)
         #print('adjusted leaf count',adjusted_leaf_count)
         #print('iomt height',height)
        
@@ -206,7 +206,7 @@ class IOMT:
             if i==1:
                 for k in range(0,adjusted_leaf_count):
                     iomt_record=self.iomtdb.get_iomt_leaf_at_pos(conn,k)
-                    print(iomt_record)
+                    #print(iomt_record)
                     new_iomt_record=self.compute_leaf_hash(iomt_record,i,k)
                     #print('new_iomt_record',new_iomt_record)
                     self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
@@ -242,7 +242,7 @@ class IOMT:
 
     @staticmethod
     def compute_leaf_hash(leaf,level,position):
-        print('level:',level,'pos:',position)
+        #print('level:',level,'pos:',position)
         if leaf[0] is None and leaf[1] is None and leaf[2] is None:   #return 0 for empty leaf
             return (0,level,position)
         else:
