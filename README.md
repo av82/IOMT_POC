@@ -34,7 +34,8 @@ None | None | None| 0 | 7
 
 **iomt.py:** provides iomt operations as below with other helper functions 
 * `compute_leaf_hash`
-* `compute_parent_hash`: This parent hash is slightly different, where if the `value` is `None` then the other value is returned. For example if left node value is `None` the right node value is returned as parent node hash
+* `compute_parent_hash`: This parent hash is slightly different, where if the `value` is `None` then the other value is returned. For example if left node value is `None` the right node value is returned as parent node hash. `why?: ` for large trees we don't have to store the intermediate nodes, and not have to compute intermediate hashes, as `f(h,v):=h, if v==0`
+
 * `buildIOMT`
 * `create_Add_Node_to_IOMT`: creates a new leaf and adds to IOMT
 * `getProofVector_for_Node`: for a node/leaf provide the proof vector (this is only for one leaf/node but not multiple)
