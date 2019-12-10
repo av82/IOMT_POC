@@ -24,8 +24,61 @@ class IOMT:
         self.VerifyProofVector(p_vector)
         p_vector=self.getProofVector_for_Node(4,1)
         self.VerifyProofVector(p_vector)
-      
+        (common_parent,v1,v2)=self.getCommonParent_Vector(4,7,1)
+        self.printCommonParent_Vector(common_parent,4,7,1,v1,v2)
+        (common_parent,v1,v2)=self.getCommonParent_Vector(0,1,1)
+        self.printCommonParent_Vector(common_parent,0,1,1,v1,v2)
     
+    def printCommonParent_Vector(self,common_parent,pos_x,pos_y,level,v1,v2):
+        print('\n-----Printing Common Parent node for',pos_x,pos_y,'at level:',level)
+        if v1 is None and v2 is None:
+            print('\nnodes are siblings, no common vector required ')
+            print('\n common parent height:',common_parent[1],'common_parent position:',common_parent[0])
+        else:
+            print('\nproof vector for node 4 level 1:')
+            for p in v1:
+                print(p)
+            print('\nproof vector for node 7 level 1:')
+            for p in v2:
+                print(p)
+            print('\n common parent height:',common_parent[1],'common_parent position:',common_parent[0])
+
+
+    def getCommonParent_Vector(self,leaf_node_pos_x, leaf_node_pos_y,height):
+        tmp_pos_x = leaf_node_pos_x
+        tmp_pos_y = leaf_node_pos_y
+        #proof vectors until common parent for x, y
+        proof_vector_x_cp=[]
+        proof_vector_y_cp=[]
+        conn = self.iomtdb.create_connection()
+        if (int)(tmp_pos_x>>1) == (int)(tmp_pos_y>>1):
+            return (((int)(tmp_pos_x>>1),height+1),None,None) # just hash the nodes at height, posx, pos_y
+        else:
+            current_parent_height=height
+            current_position_x=tmp_pos_x
+            current_position_y=tmp_pos_y
+            while (int)(current_position_x >> 1) != (int)(current_position_y >> 1):
+                if current_position_x&1:
+                    current_position_x=current_position_x-1
+                else:
+                    current_position_x=current_position_x+1
+                if current_position_y&1:
+                    current_position_y=current_position_y-1
+                else:
+                    current_position_y=current_position_y+1
+
+                iomt_node_x=self.iomtdb.get_node_at(conn,current_parent_height,current_position_x)
+                iomt_node_y=self.iomtdb.get_node_at(conn,current_parent_height,current_position_y)
+                proof_vector_x_cp.append(iomt_node_x)
+                proof_vector_y_cp.append(iomt_node_y)
+                
+                current_parent_height+=1
+                
+                current_position_x=int(current_position_x/2)
+                current_position_y=int(current_position_y/2)
+        
+            return (((int)(current_position_x>>1),current_parent_height+1),proof_vector_x_cp,proof_vector_y_cp)
+        
     def VerifyProofVector(self,proofvector):
         conn = self.iomtdb.create_connection()
         proof_length=len(proofvector)
@@ -142,24 +195,25 @@ class IOMT:
         conn.commit()
         return
 
-    def getProofVector_for_Node(self,position,height):
+    def getProofVector_for_Node(self,position,height,target_height=None):
         conn = self.iomtdb.create_connection()
-        max_height = self.iomtdb.get_max_level(conn)
+        if target_height is None:
+            target_height = self.iomtdb.get_max_level(conn)
         current_height=height
         current_position=position
-        leaf_proof_vector=[]
+        proof_vector=[]
         iomt_node=self.iomtdb.get_node_at(conn,current_height,current_position)
-        leaf_proof_vector.append(iomt_node)
-        while(current_height<max_height):
+        proof_vector.append(iomt_node)
+        while(current_height<target_height):
             if current_position&1:
                 current_position=current_position-1
             else:
                 current_position=current_position+1
             iomt_node=self.iomtdb.get_node_at(conn,current_height,current_position)
-            leaf_proof_vector.append(iomt_node)
+            proof_vector.append(iomt_node)
             current_height+=1
             current_position=int(current_position/2)
-        return leaf_proof_vector
+        return proof_vector
 
         
     @staticmethod

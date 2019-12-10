@@ -86,7 +86,7 @@ class IOMT_DB:
         return cur.lastrowid
     '''
          get the interval, 
-         modify that leaf so that the next of the leaf is index, and index next is the fit interval's next
+         modify that leaf so that the next of the leaf is index, and index next is the enclosure's interval's next
     '''
     def split_interval_iomt(self,conn,new_index,old_index,value):
         leaf=self.get_iomt_leaf_with_index(conn,old_index)
@@ -98,6 +98,10 @@ class IOMT_DB:
             cur.execute("Update iomt set next=? where level=0 and indx=?",[new_index,old_index])
             return cur.lastrowid
 
+    '''
+        set new min, that is -> find current min,create new leaf with next pointing to current min
+        the max leaf now should point to new min to complete coverage
+    '''
     def set_min_indx_iomt(self,conn,new_min_index,value):
         cur_min=self.get_min_iomt(conn)
         leaf_count=self.get_iomt_leaf_count(conn)
@@ -107,6 +111,7 @@ class IOMT_DB:
 
     '''
         set new max, that is -> next of current max to new max, and new max next to min
+        simultaneously updating a leaf of IOMT, and adding new leaf to IOMT
     '''
     def set_max_indx_iomt(self,conn,new_max_index,value):
         cur_min=self.get_min_iomt(conn)
