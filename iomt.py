@@ -19,11 +19,11 @@ class IOMT:
         self.printProofVector(7,1)
         self.printProofVector(4,1)
         p_vector=self.getProofVector_for_Node(1,1)
-        print('Verification Result for proof vector for level:1, leaf:1',self.VerifyProofVector(p_vector))
+        self.VerifyProofVector(p_vector)
         p_vector=self.getProofVector_for_Node(7,1)
-        print('Verification Result for proof vector for level:7, leaf:1',self.VerifyProofVector(p_vector))
+        self.VerifyProofVector(p_vector)
         p_vector=self.getProofVector_for_Node(4,1)
-        print('Verification Result for proof vector for level:4, leaf:1',self.VerifyProofVector(p_vector))
+        self.VerifyProofVector(p_vector)
       
     
     def VerifyProofVector(self,proofvector):
@@ -47,7 +47,7 @@ class IOMT:
                     iomt_record=self.compute_parent_hash(proofvector[i][2],hash_val,temp_level,temp_index)
                     hash_val=iomt_record[0]
         original_root=self.iomtdb.get_root(conn)
-        #print('proof root: ',hash_val,'original root',original_root)
+        print('proof root: ',hash_val,',original root',original_root,',verification result:',original_root==hash_val)
         return hash_val==original_root
 
     def printProofVector(self,index,height):
