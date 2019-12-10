@@ -53,6 +53,8 @@ None | None | None| 0 | 7
 * **Proof Vector**: Given a leaf or a node, the complementary leaves or nodes required to compute the root. The size of proof vector is log(height).
 * **Proof Vector Verification**: Given known root, and Proof Vector, and a Leaf, verify if the Leaf is part of a known IOMT (if root obtained by building root with proof vector is equivalent to the known IOMT root).
 
+## Sample output
+![Alt text](Sample_IOMT_OUTPUT.png?raw=true "Sample IOMT output"))
 
 
 
