@@ -19,11 +19,11 @@ class IOMT:
         self.printProofVector(7,1)
         self.printProofVector(4,1)
         p_vector=self.getProofVector_for_Node(1,1)
-        print(self.VerifyProofVector(p_vector))
+        print('Verification Result for proof vector for level:1, leaf:1',self.VerifyProofVector(p_vector))
         p_vector=self.getProofVector_for_Node(7,1)
-        print(self.VerifyProofVector(p_vector))
+        print('Verification Result for proof vector for level:7, leaf:1',self.VerifyProofVector(p_vector))
         p_vector=self.getProofVector_for_Node(4,1)
-        print(self.VerifyProofVector(p_vector))
+        print('Verification Result for proof vector for level:4, leaf:1',self.VerifyProofVector(p_vector))
       
     
     def VerifyProofVector(self,proofvector):
