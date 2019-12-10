@@ -55,7 +55,7 @@ None | None | None| 0 | 7
 * **Proof Vector Verification**: Given known root, and Proof Vector, and a Leaf, verify if the Leaf is part of a known IOMT (if root obtained by building root with proof vector is equivalent to the known IOMT root).
 
 ## Sample output
-![Alt text](Sample_Output_IOMT.png?raw=true "Sample IOMT output"))
+![Alt text](Sample_Output_IOMT.png?raw=true "Sample IOMT output")
 
 
 
