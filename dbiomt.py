@@ -5,8 +5,6 @@ class IOMT_DB:
     def __init__(self,db_file):
         self.db_file  =   db_file
         self.init_iomt_db()
-     
-    
     def init_iomt_db(self):
         sql_create_iomt_table = """ CREATE TABLE IF NOT EXISTS iomt (
                                         indx integer,

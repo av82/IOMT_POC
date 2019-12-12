@@ -1,49 +1,21 @@
 from hashlib import sha256
 import dbiomt 
-from intervaltree import Interval, IntervalTree
 import math
+import uuid
 
-'''
-    Assumptions: index is unique identifier
-'''
+
 class IOMT:
+    '''
+    Assumptions: index is unique identifier
+    '''
     def __init__(self,iomtdb):
         self.IOMT=[[]]
         self.iomt_leaves=[]
         self.levels=None
         self.root=None
         self.iomtdb=iomtdb
-        self.testwithNulls()
-        self.printIOMT()
-        self.printProofVector(1,1)
-        self.printProofVector(7,1)
-        self.printProofVector(4,1)
-        p_vector=self.getProofVector_for_Node(1,1)
-        self.VerifyProofVector(p_vector)
-        p_vector=self.getProofVector_for_Node(7,1)
-        self.VerifyProofVector(p_vector)
-        p_vector=self.getProofVector_for_Node(4,1)
-        self.VerifyProofVector(p_vector)
-        (common_parent,v1,v2)=self.getCommonParent_Vector(4,7,1)
-        self.printCommonParent_Vector(common_parent,4,7,1,v1,v2)
-        (common_parent,v1,v2)=self.getCommonParent_Vector(0,1,1)
-        self.printCommonParent_Vector(common_parent,0,1,1,v1,v2)
+        self.testIOMT()
     
-    def printCommonParent_Vector(self,common_parent,pos_x,pos_y,level,v1,v2):
-        print('\n-----Printing Common Parent node for',pos_x,pos_y,'at level:',level)
-        if v1 is None and v2 is None:
-            print('\nnodes are siblings, no common vector required ')
-            print('\n common parent height:',common_parent[1],'common_parent position:',common_parent[0])
-        else:
-            print('\nproof vector for node 4 level 1:')
-            for p in v1:
-                print(p)
-            print('\nproof vector for node 7 level 1:')
-            for p in v2:
-                print(p)
-            print('\n common parent height:',common_parent[1],'common_parent position:',common_parent[0])
-
-
     def getCommonParent_Vector(self,leaf_node_pos_x, leaf_node_pos_y,height):
         tmp_pos_x = leaf_node_pos_x
         tmp_pos_y = leaf_node_pos_y
@@ -66,25 +38,71 @@ class IOMT:
                     current_position_y=current_position_y-1
                 else:
                     current_position_y=current_position_y+1
-
                 iomt_node_x=self.iomtdb.get_node_at(conn,current_parent_height,current_position_x)
                 iomt_node_y=self.iomtdb.get_node_at(conn,current_parent_height,current_position_y)
                 proof_vector_x_cp.append(iomt_node_x)
                 proof_vector_y_cp.append(iomt_node_y)
-                
                 current_parent_height+=1
-                
                 current_position_x=int(current_position_x/2)
                 current_position_y=int(current_position_y/2)
         
             return (((int)(current_position_x>>1),current_parent_height+1),proof_vector_x_cp,proof_vector_y_cp)
-        
+    
+    def getVector_Three_Leaves(self,pos_x,pos_y,pos_z):
+            conn = self.iomtdb.create_connection()
+            max_level=self.iomtdb.get_max_level(conn)
+            proofvectors=[]
+            print('\nThree node vector for : %d,%d,%d max_level:%d' %(pos_x,pos_y,pos_z,max_level))
+
+            if pos_y < pos_x:
+                IOMT.swap(pos_x, pos_y)
+            if pos_z < pos_y:
+                IOMT.swap(pos_z, pos_y)
+            if pos_y < pos_x:
+                IOMT.swap(pos_y, pos_x)
+            pos_12 = pos_x ^ pos_y
+            pos_23 = pos_z ^ pos_y
+            print('pos_12', pos_12,'pos_23',pos_23)
+            i = IOMT.msb_position(pos_12)
+            j = IOMT.msb_position(pos_23)
+            if  i > j:
+                (common_parent_yz,v1,v2)=self.getCommonParent_Vector(pos_y,pos_z,1)
+                print('common parent of %d,%d,is %d, at level: %d' %(pos_y,pos_z,common_parent_yz[0],common_parent_yz[1]))
+                proofvectors.append((pos_y,pos_z,1,v1,v2))
+                pvect_x_to_cp_yz=self.getProofVector_for_Node(pos_x,common_parent_yz[1])
+                proofvectors.append((pos_x,1,pvect_x_to_cp_yz))
+                x_v_pos=pvect_x_to_cp_yz[-1][4]
+               
+                (common_parent_yz_x,v1,v2)=self.getCommonParent_Vector(x_v_pos,common_parent_yz[0],common_parent_yz[1])
+                print('common parent of %d,%d,is %d, at level: %d' %(x_v_pos,pos_z,common_parent_yz_x[0],common_parent_yz_x[1]))
+                proofvectors.append((x_v_pos,common_parent_yz[0],common_parent_yz[1],v1,v2))
+                if common_parent_yz_x[1] < max_level:
+                    pvect_cp_to_root=self.getProofVector_for_Node(common_parent_yz_x[0],common_parent_yz[1])
+                    proofvectors.append((common_parent_yz_x[0],common_parent_yz_x[1],pvect_cp_to_root))
+            else:
+                (common_parent_xy,v1,v2)=self.getCommonParent_Vector(pos_x,pos_y,1)
+                print('common parent of %d,%d,is %d, at level: %d' %(pos_x,pos_y,common_parent_xy[0],common_parent_xy[1]))
+                print(common_parent_xy,v1,v2)
+                proofvectors.append((pos_x,pos_y,1,v1,v2))
+                pvect_z_to_cp_xy=self.getProofVector_for_Node(pos_z,1,common_parent_xy[1])
+                print(pvect_z_to_cp_xy)
+                proofvectors.append((pos_z,1,pvect_z_to_cp_xy))
+                z_v_pos=pvect_z_to_cp_xy[-1][4]
+               
+                (common_parent_xy_z,v1,v2)=self.getCommonParent_Vector(z_v_pos,common_parent_xy[0],common_parent_xy[1])
+                print('common parent of %d,%d,is %d, at level: %d' %(z_v_pos,pos_z,common_parent_xy_z[0],common_parent_xy_z[1]))
+                proofvectors.append((z_v_pos,common_parent_xy[0],common_parent_xy[1],v1,v2))
+                if common_parent_xy_z[1] < max_level:
+                    pvect_cp_to_root=self.getProofVector_for_Node(common_parent_xy_z[0],common_parent_xy[1])
+                    proofvectors.append((common_parent_xy_z[0],common_parent_xy_z[1],pvect_cp_to_root))    
+            return proofvectors
+   
     def VerifyProofVector(self,proofvector):
         conn = self.iomtdb.create_connection()
         proof_length=len(proofvector)
         print('\nproof vector verification: ')
         for proof_elem in proofvector:
-            print('height:',proof_elem[3],'index:',proof_elem[4],'hash:',proof_elem[2])
+            print('height:',proof_elem[3],'position:',proof_elem[4],'hash:',proof_elem[2])
         hash_val=None
         if proof_length<1:
             return hash_val
@@ -122,7 +140,7 @@ class IOMT:
         
         
         #self.buildIOMT()
-    def testwithNulls(self):
+    def testIOMT(self):
         leaf_value="test"
         self.create_Add_Leaf_to_IOMT(10,leaf_value)
         self.buildIOMT()
@@ -139,20 +157,38 @@ class IOMT:
         self.create_Add_Leaf_to_IOMT(25,leaf_value)
         self.buildIOMT()
 
-        #conn = self.iomtdb.create_connection()
-        #self.iomtdb.print_iomt_leaves(conn)
-        
-        #self.iomtdb.print_iomt_leaves(conn)
-        #self.create_Add_Leaf_to_IOMT(5,leaf_value)
-        #self.buildIOMT()
-        '''self.create_Add_Leaf_to_IOMT(None,leaf_value)
-        self.create_Add_Leaf_to_IOMT(25,leaf_value)
-        self.create_Add_Leaf_to_IOMT(2,leaf_value)
-        self.create_Add_Leaf_to_IOMT(None,leaf_value)
-        self.create_Add_Leaf_to_IOMT(45,leaf_value)
-        conn = self.iomtdb.create_connection()
-        self.iomtdb.print_iomt_leaves(conn)'''
+        self.printIOMT()
+        '''self.printProofVector(1,1)
+        self.printProofVector(7,1)
+        self.printProofVector(4,1)
+        p_vector=self.getProofVector_for_Node(1,1)
+        self.VerifyProofVector(p_vector)
+        p_vector=self.getProofVector_for_Node(7,1)
+        self.VerifyProofVector(p_vector)
+        p_vector=self.getProofVector_for_Node(4,1)
+        self.VerifyProofVector(p_vector)
+        (common_parent,v1,v2)=self.getCommonParent_Vector(4,7,1)
+        self.printCommonParent_Vector(common_parent,4,7,1,v1,v2)
+        (common_parent,v1,v2)=self.getCommonParent_Vector(0,1,1)
+        self.printCommonParent_Vector(common_parent,0,1,1,v1,v2)'''
+        proofvectors=self.getVector_Three_Leaves(0,1,5)
+        print('\nproof vectors for 3 nodes')
+        print(proofvectors)
     
+    def printCommonParent_Vector(self,common_parent,pos_x,pos_y,level,v1,v2):
+        print('\n-----Printing Common Parent node for',pos_x,pos_y,'at level:',level)
+        if v1 is None and v2 is None:
+            print('\nnodes are siblings, no common vector required ')
+            print('\n common parent height:',common_parent[1],'common_parent position:',common_parent[0])
+        else:
+            print('\nproof vector for node 4 level 1:')
+            for p in v1:
+                print(p)
+            print('\nproof vector for node 7 level 1:')
+            for p in v2:
+                print(p)
+            print('\n common parent height:',common_parent[1],'common_parent position:',common_parent[0])
+
     '''
         create new iomt leaf
     '''
@@ -184,7 +220,6 @@ class IOMT:
              if range is not None:
                  self.iomtdb.split_interval_iomt(conn,index,range[0],data)
         conn.commit()
-        #self.iomtdb.get_iomt_leaf_with_index(conn,index)
         return
         
     def create_Add_Node_to_IOMT(self,data,level,position):
@@ -215,9 +250,15 @@ class IOMT:
             current_position=int(current_position/2)
         return proof_vector
 
-        
     @staticmethod
-    def msb(n):
+    def swap(x, y):
+        tmp = x
+        x = y
+        y = tmp
+        return (x,y)
+ 
+    @staticmethod
+    def msb_position(n):
         return int(math.log(n,2))
 
     @staticmethod        
@@ -233,7 +274,6 @@ class IOMT:
         p=1
         while (p < n) : 
             p <<= 1
-        #print('next power of 2:',p)
         return p 
         
     '''
@@ -260,25 +300,14 @@ class IOMT:
             if i==1:
                 for k in range(0,adjusted_leaf_count):
                     iomt_record=self.iomtdb.get_iomt_leaf_at_pos(conn,k)
-                    #print(iomt_record)
                     new_iomt_record=self.compute_leaf_hash(iomt_record,i,k)
-                    #print('new_iomt_record',new_iomt_record)
                     self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
-                #self.iomtdb.print_iomt_leaves(conn)
-                #self.iomtdb.print_iomt_nodes(conn)
             else:
-                #level_node_count= math.ceil(adjusted_leaf_count/i) 
                 lower_level_node_count=self.iomtdb.get_iomt_node_count_at_level(conn,i-1)
-                #print('lower_level_node_count',i-1,lower_level_node_count)
-                #print('level node count',level_node_count)
-                #print('len of j',lower_level_node_count)
                 for j,l in zip(range(0,lower_level_node_count,2),range(0,math.ceil(lower_level_node_count/2))):
-                    #print('i',i,'j',j)
-                    #self.iomtdb.print_iomt_nodes(conn)
                     left=self.iomtdb.get_node_at(conn,i-1,j)
                     right=self.iomtdb.get_node_at(conn,i-1,j+1)
                     new_iomt_record=IOMT.compute_parent_hash(left[2],right[2],i,l)
-                    #print('new_iomt_record',new_iomt_record)
                     self.create_Add_Node_to_IOMT(new_iomt_record[0],new_iomt_record[1],new_iomt_record[2])
         root=self.iomtdb.get_root(conn)
         self.root= root
@@ -286,7 +315,6 @@ class IOMT:
      
     @staticmethod
     def compute_parent_hash(left_hash,right_hash,level,position):
-        #print('l:',left_hash,'r:',right_hash,'h:',level,'p:',position)
         if left_hash=='0':
             return (right_hash,level,position)
         elif right_hash=='0':
@@ -296,7 +324,6 @@ class IOMT:
 
     @staticmethod
     def compute_leaf_hash(leaf,level,position):
-        #print('level:',level,'pos:',position)
         if leaf[0] is None and leaf[1] is None and leaf[2] is None:   #return 0 for empty leaf
             return (0,level,position)
         else:
