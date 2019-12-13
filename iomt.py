@@ -3,6 +3,11 @@ import dbiomt
 import math
 import random
 import uuid
+import testing.postgresql
+from sqlalchemy import create_engine
+import psycopg2
+
+
 
 class Node:
     def __init__(self,index,next,value,level,position):
@@ -20,7 +25,29 @@ class IOMT:
         self.root = None
         self.iomtdb = iomtdb
         self.testIOMT()
-    
+        #self.test()
+        #self.setUp()
+     
+   
+    ''' def setUp(self):
+        pgsql = testing.postgresql.Postgresql()
+        db = create_engine(pgsql.url())
+        db.execute("CREATE TABLE longtest(id1 numeric, id2 numeric)")
+        uuid.uuid4().int
+        db.execute("INSERT INTO longtest values(%s,%s)",(uuid.uuid4().int,uuid.uuid4().int))
+        result_set = db.execute("SELECT * FROM longtest")  
+        for r in result_set:  
+            a=r[0]
+            b=r[1]
+            print('a>b?',a==b)
+            print(r)'''
+   
+    '''def test(self):
+        conn = self.iomtdb.create_connection()
+        sql = "insert into iomt values(%s,%s,%s,%s,%s)"
+        conn.execute(sql,(uuid.uuid4().int,uuid.uuid4().int,"hash",1,0))'''
+       
+
     def printProofVector(self,index,height):
         proof_leaf_test=self.getProofVector_for_Node(index,height)
         print('\nproof vector for leaf: ',index)
@@ -36,16 +63,23 @@ class IOMT:
         root=self.iomtdb.get_root(conn)
         if root is not None:
             print ('\n ROOT: ',root)
+        min=self.iomtdb.get_min_iomt(conn)
+        print('\nmin: ',min)
+        max=self.iomtdb.get_max_iomt(conn)
+        print('\nmax: ',max)
         
         #self.buildIOMT()
     def testIOMT(self):
         leaf_value="test"
-        for i in range(256):
-            index=random.randint(1,1000000)
+        for i in range(12):
+            index=uuid.uuid4().int
             self.create_Add_Leaf_to_IOMT(index,leaf_value)
             self.buildIOMT()
         
-        '''self.create_Add_Leaf_to_IOMT(20,leaf_value)
+        '''
+        self.create_Add_Leaf_to_IOMT(10,leaf_value)
+        self.buildIOMT()
+        self.create_Add_Leaf_to_IOMT(20,leaf_value)
         self.buildIOMT()
         self.create_Add_Leaf_to_IOMT(40,leaf_value)
         self.buildIOMT()
@@ -337,7 +371,7 @@ class IOMT:
 
    
 def main():
-    iomtdb=dbiomt.IOMT_DB('iomt.db')
+    iomtdb=dbiomt.IOMT_DB()
     IOMT(iomtdb)
   
 if __name__== "__main__":
