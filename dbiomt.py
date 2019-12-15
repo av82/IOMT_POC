@@ -1,8 +1,6 @@
-import sqlite3
-from sqlite3 import Error
 import testing.postgresql
-import pg8000
 from sqlalchemy import create_engine
+import pg8000
 
 class IOMT_DB:
     def __init__(self):
