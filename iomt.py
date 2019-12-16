@@ -4,6 +4,7 @@ import math
 import random
 import uuid
 import testing.postgresql
+import TVerifier
 from sqlalchemy import create_engine
 
 
@@ -24,6 +25,7 @@ class IOMT:
     def __init__(self,iomtdb):
         self.root = None
         self.iomtdb = iomtdb
+        self.verifier = TVerifier.TVerifier()
         self.testIOMT()
         #self.test()
         #self.setUp()
@@ -100,24 +102,48 @@ class IOMT:
         self.printProofVector(pv)
         p_vector=self.getProofVector_for_Node(1,1)
         self.VerifyProofVector(p_vector)
+        #self.verifier.VerifyProofVector(p_vector)
         p_vector=self.getProofVector_for_Node(7,1)
         self.VerifyProofVector(p_vector)
+        #self.verifier.VerifyProofVector(p_vector)
         p_vector=self.getProofVector_for_Node(4,1)
         self.VerifyProofVector(p_vector)
+        #self.verifier.VerifyProofVector(p_vector)
+
         (left_node_pos,right_node_pos,lr_level,common_parent,common_parent_level,v1,v2)=self.getCommonParent_Vector(4,7,1)
         self.printCommonParent_Vector(common_parent,common_parent_level,left_node_pos,right_node_pos,lr_level,v1,v2)
         (left_node_pos,right_node_pos,lr_level,common_parent,common_parent_level,v1,v2)=self.getCommonParent_Vector(0,1,1)
         self.printCommonParent_Vector(common_parent,common_parent_level,left_node_pos,right_node_pos,lr_level,v1,v2)
         pv=self.getVector_Three_Leaves(0,1,5)
         self.print_Three_Leaf_Proof_Vectors(pv[0],pv[1],pv[2],pv[3],pv[4],pv[5],pv[6],pv[7],pv[8])
+        self.Verify_Three_Leaf_ProofVector(pv[0],pv[1],pv[2],pv[3],pv[4],pv[5],pv[6],pv[7],pv[8])
+
     
+    def check_leaf_consistency(self,leaf,hash):
+        return self.compute_leaf_hash([leaf.index,leaf.next,leaf.value],leaf.position,leaf.level)[0]==hash
+
+    def Verify_Three_Leaf_ProofVector(self,pair_left_leaf,pair_right_leaf,third_leaf,p_lv_to_cp,p_rv_to_cp,t_lv_to_cp_level,cp_lv_to_n_cp,cp_rv_to_n_cp,final_cp_v):
+        print('\n------verification of three leafs to root-----')
+        print('\nverify pair_left_leaf',self.check_leaf_consistency(pair_left_leaf,p_lv_to_cp[0].value))
+        print('\nverify pair_right_leaf',self.check_leaf_consistency(pair_right_leaf,p_rv_to_cp[0].value))
+        print('\nverify third_leaf',self.check_leaf_consistency(third_leaf,t_lv_to_cp_level[0].value))
+        if self.check_leaf_consistency(pair_left_leaf,p_lv_to_cp[0].value) and self.check_leaf_consistency(pair_right_leaf,p_rv_to_cp[0].value) and self.check_leaf_consistency(third_leaf,t_lv_to_cp_level[0].value):
+            return
+        
+
+        return
+    
+    def Verify_Two_Leaf_ProofVector(self,pair_left_leaf,pair_right_leaf,third_leaf,p_lv_to_cp,p_rv_to_cp,t_lv_to_cp_level,cp_lv_to_n_cp,cp_rv_to_n_cp,final_cp_v):
+
+        return
+
     def print_Three_Leaf_Proof_Vectors(self,pair_left_leaf,pair_right_leaf,third_leaf,p_lv_to_cp,p_rv_to_cp,t_lv_to_cp_level,cp_lv_to_n_cp,cp_rv_to_n_cp,final_cp_v):
-        print('\norder of applying compute_hash:',pair_left_leaf,pair_right_leaf,third_leaf)
-        print('vector for left_leaf in pair: %d' %(pair_left_leaf))
+        print('\norder of applying compute_hash:',pair_left_leaf.position,pair_right_leaf.position,third_leaf.position)
+        print('vector for left_leaf in pair: %d' %(pair_left_leaf.position))
         self.printProofVector(p_lv_to_cp)
-        print('vector for right_leaf in pair: %d' %(pair_right_leaf))
+        print('vector for right_leaf in pair: %d' %(pair_right_leaf.position))
         self.printProofVector(p_rv_to_cp)
-        print('vector for third_leaf: %d' %(pair_right_leaf))
+        print('vector for third_leaf: %d' %(third_leaf.position))
         self.printProofVector(t_lv_to_cp_level)
         print('\nvector for left of common parents:')
         self.printProofVector(cp_lv_to_n_cp)
@@ -319,8 +345,15 @@ class IOMT:
             cp_lv_to_n_cp = v1
             cp_rv_to_n_cp = v2
             if common_parent_xy_z_level < max_level:
-                    pvect_cp_to_root=self.getProofVector_for_Node(common_parent_xy_z,common_parent_xy_z_level)
-                    final_cp_v = pvect_cp_to_root
+                pvect_cp_to_root=self.getProofVector_for_Node(common_parent_xy_z,common_parent_xy_z_level)
+                final_cp_v = pvect_cp_to_root
+            iomt_node=self.iomtdb.get_iomt_leaf_at_pos(conn,pair_left_leaf)
+            pair_left_leaf=Node(iomt_node[0],iomt_node[1],iomt_node[2],iomt_node[3],iomt_node[4])
+            iomt_node=self.iomtdb.get_iomt_leaf_at_pos(conn,pair_right_leaf)
+            pair_right_leaf=Node(iomt_node[0],iomt_node[1],iomt_node[2],iomt_node[3],iomt_node[4])
+            iomt_node=self.iomtdb.get_iomt_leaf_at_pos(conn,third_leaf)
+            third_leaf=Node(iomt_node[0],iomt_node[1],iomt_node[2],iomt_node[3],iomt_node[4])
+            
         return (pair_left_leaf,pair_right_leaf,third_leaf,p_lv_to_cp,p_rv_to_cp,t_lv_to_cp_level,cp_lv_to_n_cp,cp_rv_to_n_cp,final_cp_v)
     
     def VerifyProofVector(self,proofvector):

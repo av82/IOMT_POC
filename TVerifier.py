@@ -1,30 +1,45 @@
 from hashlib import sha256
 
 class TVerifier:
-    def __init__(self,root_value):
+    def __init__(self,root_value=None):
         self.root_value = root_value
     
+    #All operations are atomic
+    def updateLeaf(self,leaf,proof_vector,current_root,new_root):
+        return
+    
+    def updateTwoLeaves(self):
+        return
+    
+    def updateThreeLeaves(self):
+        return
+    
+    def verifyLeaf_for_Rules(self):
+        return
+
+
     def VerifyProofVector(self,proofvector):
         proof_length=len(proofvector)
         print('\nproof vector verification: ')
         for proof_elem in proofvector:
-            print('height:',proof_elem[3],'position:',proof_elem[4],'hash:',proof_elem[2])
+            print('level:',proof_elem.level,'position:',proof_elem.position,'hash:',proof_elem.value)
         hash_val=None
         if proof_length<1:
             return hash_val
         else:
-            hash_val=proofvector[0][2]
+            hash_val=proofvector[0].value
             for i  in range(1,proof_length):
-                temp_level=proofvector[i][3]+1
-                temp_index=int(proofvector[i][4]/2)
-                if proofvector[i][4]&1 == 1:
-                    iomt_record=TVerifier.compute_parent_hash(hash_val,proofvector[i][2],temp_level,temp_index)
+                temp_level=proofvector[i].level+1
+                temp_index=int(proofvector[i].position/2)
+                if proofvector[i].position &1 == 1:
+                    iomt_record=self.compute_parent_hash(hash_val,proofvector[i].value,temp_level,temp_index)
                     hash_val=iomt_record[0]
                 else:
-                    iomt_record=TVerifier.compute_parent_hash(proofvector[i][2],hash_val,temp_level,temp_index)
+                    iomt_record=self.compute_parent_hash(proofvector[i].value,hash_val,temp_level,temp_index)
                     hash_val=iomt_record[0]
-        print('proof root: ',hash_val,',original root',self.root_value,',verification result:',self.root_value==hash_val)
-        return hash_val == self.root_value
+        original_root=self.root_value
+        print('proof root: ',hash_val,',original root',original_root,',verification result:',original_root==hash_val)
+        return hash_val==original_root
         
     @staticmethod
     def compute_parent_hash(left_hash,right_hash,level,position):
