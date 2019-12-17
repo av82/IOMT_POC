@@ -27,8 +27,8 @@ class IOMT:
         self.create_Add_Leaf_to_IOMT(index,"BOOTSTRAP")
         self.buildIOMT()
         self.printIOMT()
+        #initialize Trusted verifier with a bootstrap root
         self.verifier = TVerifier.TVerifier(self.root)
-       
         #test driver code to test IOMT
         self.testIOMT()
         #self.test()
@@ -60,10 +60,10 @@ class IOMT:
         for i in range(12):
             index=uuid.uuid4().int
             (affected_leaf,pv_affected_leaf,fit_case)=self.create_Add_Leaf_to_IOMT(index,leaf_value+str(i))
-            print('al:',affected_leaf.position,affected_leaf.value,affected_leaf.index,affected_leaf.next)
-            print('new_leaf index:',index)
+            #print('al:',affected_leaf.position,affected_leaf.value,affected_leaf.index,affected_leaf.next)
+            #print('new_leaf index:',index)
             #self.printProofVector(pv_affected_leaf)
-            print('fit:',fit_case)
+            #print('fit:',fit_case)
 
             old_root = self.root
             self.buildIOMT()
@@ -74,7 +74,7 @@ class IOMT:
             (left_node_pos,right_node_pos,lr_level,common_parent,common_parent_level,v1,v2) = self.getCommonParent_Vector(affected_leaf.position,new_leaf.position,1)
             #print('cp',common_parent,'cp level:',common_parent_level,'new leaf:',new_leaf.position,'old leaf:',affected_leaf.position,'total:',self.iomtdb.get_iomt_leaf_count(conn))
             pv_cp_to_root=self.getProofVector_for_Node(common_parent,common_parent_level)
-            print('new leaf:',new_leaf.position,'old leaf:',affected_leaf.position,'total:',self.iomtdb.get_iomt_leaf_count(conn))
+            #print('new leaf:',new_leaf.position,'old leaf:',affected_leaf.position,'total:',self.iomtdb.get_iomt_leaf_count(conn))
             self.verifier.addLeaf(new_leaf,pv_new_leaf,affected_leaf,pv_affected_leaf,v1,v2,pv_cp_to_root,fit_case,old_root,new_root)
             
      
@@ -146,9 +146,9 @@ class IOMT:
         first_leaf_integrity = self.check_leaf_integrity(pair_left_leaf,p_lv_to_cp[0].value)
         second_leaf_integrity = self.check_leaf_integrity(pair_right_leaf,p_rv_to_cp[0].value)
         third_leaf_integrity = self.check_leaf_integrity(third_leaf,t_lv_to_cp_level[0].value)
-        print('verify pair_left_leaf',first_leaf_integrity)
-        print('verify pair_right_leaf',second_leaf_integrity)
-        print('verify third_leaf',third_leaf_integrity)
+        print('verify pair_left_leaf:',first_leaf_integrity)
+        print('verify pair_right_leaf:',second_leaf_integrity)
+        print('verify third_leaf:',third_leaf_integrity)
         if first_leaf_integrity == False or second_leaf_integrity == False or third_leaf_integrity == False:
             print('failed integrity check of leaves')
             return 
@@ -173,6 +173,9 @@ class IOMT:
         print('checking tleaf')
         if tleaf_to_first_cp.value == cp_lv_to_n_cp[0].value or tleaf_to_first_cp.value == cp_rv_to_n_cp[0].value:
             print ('third leaf common parent checks out')
+        else:
+            print('failed check for third leaf to node at level of pairwise leaves and third leaf')
+            return 
         cp_sibling_1=self.applyProofvector(cp_lv_to_n_cp)
         cp_sibling_2=self.applyProofvector(cp_rv_to_n_cp)
         left_sibling,right_sibling=None,None
