@@ -42,8 +42,7 @@ class IOMT_DB:
         try:
             engine = create_engine(self.pgsql.url())
             conn = engine.raw_connection()
-            return conn
-        except Error as e:
+        except Exception as e:
             print(e)
         return conn
 
@@ -52,13 +51,14 @@ class IOMT_DB:
             c = conn.cursor()
             c.execute(create_table_sql)
             conn.commit()
-        except Error as e:
+        except Exception as e:
             print(e)
+        return
    
     def create_or_update_iomt_record(self,conn, iomt_record):
         place_holder=self.get_min_place_holder_position(conn,iomt_record[3])
         if place_holder is None or iomt_record[0] is None:
-            if iomt_record[3]>0:
+            if iomt_record[3]>0: # if it is a node and not a leaf? [3] is level [4] is position in a level
                 if self.get_node_at(conn,iomt_record[3],iomt_record[4]) is None:
                     sql = "insert into iomt values(%s,%s,%s,%s,%s)"
                     cur = conn.cursor()
@@ -81,13 +81,25 @@ class IOMT_DB:
     
     def check_enclosure(self,conn,new_indx):
         cur = conn.cursor()
-        cur.execute("select indx,next from iomt where level=0 and indx<%s and next>%s",[new_indx,new_indx])
+        cur.execute("select indx,next,position from iomt where level=0 and indx<%s and next>%s",[new_indx,new_indx])
         rows = cur.fetchall()
         if len(rows)>0:
-            return [rows[0][0],rows[0][1]]
+            return [rows[0][0],rows[0][1],rows[0][2]]
         else:
             return None
-
+   
+    def get_min_index_leaf(self,conn):
+        cur = conn.cursor()
+        cur.execute("select * from iomt where indx=(select min(indx) from iomt)")
+        rows = cur.fetchall()
+        return rows[0]
+    
+    def get_max_index_leaf(self,conn):
+        cur = conn.cursor()
+        cur.execute("select * from iomt where indx=(select max(indx) from iomt)")
+        rows = cur.fetchall()
+        return rows[0]
+    
     def get_min_iomt(self,conn):
         cur = conn.cursor()
         cur.execute("select min(indx) from iomt where level=0")
