@@ -86,11 +86,11 @@ class TVerifier:
                         TVerifier.printProofVector(pv_cp_root)
                         if first_cp[0] == pv_cp_root[0].value:
                             final_node = self.applyProofvector(pv_cp_root)
-                            print('final computed root in TV:',final_node.value,'new proposed root:',new_root)
+                            print('Final computed root in Trusted Verifier:',final_node.value,'new proposed root:',new_root)
                             if final_node.value == new_root:
-                                print('VERIFIED OLD LEAF with OLD ROOT', old_leaf_1.position)
-                                print('VERIFIED OLD ROOT',self.root_value)
+                                print('VERIFIED OLD LEAF: ', old_leaf_1.position, 'WITH OLD ROOT: ', self.root_value)
                                 self.root_value = new_root #store new root only on all checks/computations, and sign it
+                                print('ADDED NEW LEAF at: ', new_leaf.position, 'WITH NEW ROOT: ', self.root_value)
                                 print('UPDATED ROOT IN TRUSTED VERIFIER:',final_node.value)
                             else:
                                 return False
@@ -130,7 +130,7 @@ class TVerifier:
                     iomt_record=self.compute_parent_hash(proofvector[i].value,hash_val,temp_level,temp_index)
                     hash_val=iomt_record[0]
         original_root=self.root_value
-        print('proof root: ',hash_val,',original root',original_root,',verification result:',original_root==hash_val)
+        print('proof root: ',hash_val,',TV current stored root',original_root,',result:',original_root==hash_val)
         return hash_val==original_root
         
     @staticmethod

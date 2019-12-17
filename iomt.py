@@ -57,7 +57,7 @@ class IOMT:
     def testIOMT(self):
         leaf_value="test"
         conn = self.iomtdb.create_connection()
-        for i in range(12):
+        for i in range(256):
             index=uuid.uuid4().int
             (affected_leaf,pv_affected_leaf,fit_case)=self.create_Add_Leaf_to_IOMT(index,leaf_value+str(i))
             #print('al:',affected_leaf.position,affected_leaf.value,affected_leaf.index,affected_leaf.next)

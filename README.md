@@ -1,6 +1,15 @@
 # IOMT setup and test
 
-IOMT: Index Ordered Merkle tree. The leaves of the tree contain circular linked leaves of the form index,next,value,level,position. Value can be any blob
+IOMT: Index Ordered Merkle tree. The leaves of the tree contain circular linked leaves of the form index,next,value,level,position. Value can be any blob.
+
+* This datastructure is useful in following avenues:
+    * where an untrusted prover maintains records, and trusted verifier certifies a record or entire record set by simply 
+      applying sequence of hash operations and signing the commitment (root of the tree)
+    * where an untrusted prover requires to prove uniqueness and or freshness of a record
+    * where uniqueness of association of entities is required to be proven to Trusted Verifier, to obtain some attestation of 
+      association 
+    * where different elements of object can be indexed to prove different uniqueness constraint enforcements, that is a leaf may contain more than one index depending on the number of unique factors that an untrusted prover may be required to prove. For example: uniqueness of an idetifier of a record, and uniqueness of association of a record to a value. 
+    * where proof of non-existence is required. For example, a unique identifier in a database / record set needs to be unique. But, if Trusted Verifier does not store any records and merely computes hash operations, verifies against state of all records- commitment (root of tree), it is hard to verify uniqueness. By index ordering the tree above assurances/requirements can be met
 
 ## Requirements
 
@@ -13,6 +22,10 @@ pip install pg8000
 The implementation is broken to persistence layer and interface layer. The persistence layer is performed by ```dbiomt.py```. 
 
 **dbiomt.py:** provides persistence functions to store the iomt nodes/leaves in a database table as below with other helper functions
+
+**TVerifier.py:** provides simple verifier functions to verify the commitment (root) for existing root, and updates the root stored in trusted boundary only if the proof vector of complementary nodes is consistentent with existing root. That is, by simply applying sequence of hashes in right order on given proof vector, a leaf can be verified for its membership in an IOMT.
+
+Note: Trusted Verifier functions do not maintain any leaves/intermediate nodes/any parts of tree. The TV is bootstrapped with
 
 IOMT Table:
 
