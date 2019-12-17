@@ -14,9 +14,9 @@ IOMT: Index Ordered Merkle tree. The leaves of the tree contain circular linked 
 ## Requirements
 
 python 3\
-pip install testing.postgresql
-pip install sqlalchemy
-pip install pg8000
+pip install testing.postgresql\
+pip install sqlalchemy\
+pip install pg8000\
 
 ## High level details
 The implementation is broken to persistence layer and interface layer. The persistence layer is performed by ```dbiomt.py```. 
